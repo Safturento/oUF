@@ -47,7 +47,7 @@ local function Update(self, event)
 	-- own groups via UnitIsGroupLeader(unit, LE_PARTY_CATEGORY_HOME) or by members of other groups via
 	-- UnitLeadsAnyGroup(unit). Inside the group formed by the dungeon finder UnitIsGroupLeader(unit) will only return
 	-- true for the instance leader.
-	local isInLFGInstance = HasLFGRestrictions()
+	local isInLFGInstance = HasLFGRestrictions and HasLFGRestrictions()
 	local isLeader = UnitIsGroupLeader(unit)
 	if(isLeader) then
 		if(isInLFGInstance) then
@@ -98,6 +98,10 @@ local function Enable(self)
 
 		self:RegisterEvent('PARTY_LEADER_CHANGED', Path, true)
 		self:RegisterEvent('GROUP_ROSTER_UPDATE', Path, true)
+
+		if(element:IsObjectType('Texture') and not element:GetTexture()) then
+			element:SetTexture([[Interface\GroupFrame\UI-Group-LeaderIcon]])
+		end
 
 		return true
 	end

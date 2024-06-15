@@ -1,4 +1,4 @@
-local _, ns = ...
+local parent, ns = ...
 local oUF = ns.oUF
 local Private = oUF.Private
 
@@ -21,7 +21,7 @@ function factory:PLAYER_LOGIN()
 	end
 
 	-- Avoid creating dupes.
-	table.wipe(queue)
+	wipe(queue)
 end
 
 --[[ Factory: oUF:Factory(func)

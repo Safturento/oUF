@@ -76,10 +76,14 @@ local oUF = ns.oUF
 local function UpdateTooltip(self)
 	if(GameTooltip:IsForbidden()) then return end
 
-	if(self.isHarmful) then
-		GameTooltip:SetUnitDebuffByAuraInstanceID(self:GetParent().__owner.unit, self.auraInstanceID)
+	if oUF.isRetail then
+		if(self.isHarmful) then
+			GameTooltip:SetUnitDebuffByAuraInstanceID(self:GetParent().__owner.unit, self.auraInstanceID)
+		else
+			GameTooltip:SetUnitBuffByAuraInstanceID(self:GetParent().__owner.unit, self.auraInstanceID)
+		end
 	else
-		GameTooltip:SetUnitBuffByAuraInstanceID(self:GetParent().__owner.unit, self.auraInstanceID)
+		GameTooltip:SetUnitAura(self:GetParent().__owner.unit, self:GetID(), self.filter)
 	end
 end
 
@@ -101,6 +105,9 @@ end
 
 local function CreateButton(element, index)
 	local button = CreateFrame('Button', element:GetDebugName() .. 'Button' .. index, element)
+	if not oUF.isRetail then
+		button:RegisterForClicks('RightButtonUp')
+	end
 
 	local cd = CreateFrame('Cooldown', '$parentCooldown', button, 'CooldownFrameTemplate')
 	cd:SetAllPoints()

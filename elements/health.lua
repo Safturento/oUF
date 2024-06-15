@@ -86,30 +86,32 @@ local function UpdateColor(self, event, unit)
 	if(not unit or self.unit ~= unit) then return end
 	local element = self.Health
 
-	local r, g, b, color
+	local r, g, b, t
 	if(element.colorDisconnected and not UnitIsConnected(unit)) then
-		color = self.colors.disconnected
+		t = self.colors.disconnected
 	elseif(element.colorTapping and not UnitPlayerControlled(unit) and UnitIsTapDenied(unit)) then
-		color = self.colors.tapped
+		t = self.colors.tapped
+	elseif(element.colorHappiness and UnitIsUnit(unit, "pet") and GetPetHappiness and GetPetHappiness()) then
+		t = self.colors.happiness[GetPetHappiness()]
 	elseif(element.colorThreat and not UnitPlayerControlled(unit) and UnitThreatSituation('player', unit)) then
-		color =  self.colors.threat[UnitThreatSituation('player', unit)]
+		t =  self.colors.threat[UnitThreatSituation('player', unit)]
 	elseif(element.colorClass and UnitIsPlayer(unit))
 		or (element.colorClassNPC and not UnitIsPlayer(unit))
 		or (element.colorClassPet and UnitPlayerControlled(unit) and not UnitIsPlayer(unit)) then
 		local _, class = UnitClass(unit)
-		color = self.colors.class[class]
+		t = self.colors.class[class]
 	elseif(element.colorSelection and unitSelectionType(unit, element.considerSelectionInCombatHostile)) then
-		color = self.colors.selection[unitSelectionType(unit, element.considerSelectionInCombatHostile)]
+		t = self.colors.selection[unitSelectionType(unit, element.considerSelectionInCombatHostile)]
 	elseif(element.colorReaction and UnitReaction(unit, 'player')) then
-		color = self.colors.reaction[UnitReaction(unit, 'player')]
+		t = self.colors.reaction[UnitReaction(unit, 'player')]
 	elseif(element.colorSmooth) then
 		r, g, b = self:ColorGradient(element.cur or 1, element.max or 1, unpack(element.smoothGradient or self.colors.smooth))
 	elseif(element.colorHealth) then
-		color = self.colors.health
+		t = self.colors.health
 	end
 
-	if(color) then
-		r, g, b = color[1], color[2], color[3]
+	if(t) then
+		r, g, b = t[1], t[2], t[3]
 	end
 
 	if(b) then
@@ -162,12 +164,23 @@ local function Update(self, event, unit)
 	end
 
 	local cur, max = UnitHealth(unit), UnitHealthMax(unit)
-	element:SetMinMaxValues(0, max)
 
-	if(UnitIsConnected(unit)) then
-		element:SetValue(cur)
+	if element.smoothing then
+		element:SetMinMaxSmoothedValue(0, max)
+
+		if(UnitIsConnected(unit)) then
+			element:SetSmoothedValue(cur)
+		else
+			element:SetSmoothedValue(max)
+		end
 	else
-		element:SetValue(max)
+		element:SetMinMaxValues(0, max)
+
+		if(UnitIsConnected(unit)) then
+			element:SetValue(cur)
+		else
+			element:SetValue(max)
+		end
 	end
 
 	element.cur = cur
@@ -275,7 +288,7 @@ local function SetColorThreat(element, state, isForced)
 	end
 end
 
-local function Enable(self)
+local function Enable(self, unit)
 	local element = self.Health
 	if(element) then
 		element.__owner = self
@@ -301,7 +314,17 @@ local function Enable(self)
 			self:RegisterEvent('UNIT_THREAT_LIST_UPDATE', ColorPath)
 		end
 
-		self:RegisterEvent('UNIT_HEALTH', Path)
+		if(element.smoothing) then
+			element.SetSmoothedValue = SmoothStatusBarMixin.SetSmoothedValue
+			element.SetMinMaxSmoothedValue = SmoothStatusBarMixin.SetMinMaxSmoothedValue
+		end
+
+		if oUF.isRetail then
+			self:RegisterEvent('UNIT_HEALTH', Path)
+		else
+			self:RegisterEvent('UNIT_HEALTH_FREQUENT', Path)
+		end
+
 		self:RegisterEvent('UNIT_MAXHEALTH', Path)
 
 		if(element:IsObjectType('StatusBar') and not element:GetStatusBarTexture()) then

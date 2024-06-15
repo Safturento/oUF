@@ -1,4 +1,4 @@
-local _, ns = ...
+local parent, ns = ...
 local Private = ns.oUF.Private
 
 function Private.argcheck(value, num, ...)
@@ -8,7 +8,7 @@ function Private.argcheck(value, num, ...)
 		if(type(value) == select(i, ...)) then return end
 	end
 
-	local types = string.join(', ', ...)
+	local types = strjoin(', ', ...)
 	local name = debugstack(2,2,0):match(": in function [`<](.-)['>]")
 	error(string.format("Bad argument #%d to '%s' (%s expected, got %s)", num, name, types, type(value)), 3)
 end
@@ -19,10 +19,6 @@ end
 
 function Private.error(...)
 	Private.print('|cffff0000Error:|r ' .. string.format(...))
-end
-
-function Private.nierror(...)
-	return geterrorhandler()(...)
 end
 
 function Private.unitExists(unit)
@@ -66,21 +62,16 @@ function Private.unitSelectionType(unit, considerHostile)
 	end
 end
 
+local function errorHandler(...)
+	return geterrorhandler()(...)
+end
+
 function Private.xpcall(func, ...)
-	return xpcall(func, Private.nierror, ...)
+	return xpcall(func, errorHandler, ...)
 end
 
 function Private.validateEvent(event)
-	local isOK = xpcall(validator.RegisterEvent, Private.nierror, validator, event)
-	if(isOK) then
-		validator:UnregisterEvent(event)
-	end
-
-	return isOK
-end
-
-function Private.isUnitEvent(event, unit)
-	local isOK = pcall(validator.RegisterUnitEvent, validator, event, unit)
+	local isOK = xpcall(validator.RegisterEvent, errorHandler, validator, event)
 	if(isOK) then
 		validator:UnregisterEvent(event)
 	end

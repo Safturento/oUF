@@ -59,7 +59,6 @@ local SPELL_POWER_SOUL_SHARDS = Enum.PowerType.SoulShards or 7
 local SPELL_POWER_HOLY_POWER = Enum.PowerType.HolyPower or 9
 local SPELL_POWER_CHI = Enum.PowerType.Chi or 12
 local SPELL_POWER_ARCANE_CHARGES = Enum.PowerType.ArcaneCharges or 16
-local SPELL_POWER_ESSENCE = Enum.PowerType.Essence or 19
 
 -- Holds the class specific stuff.
 local ClassPowerID, ClassPowerType
@@ -110,16 +109,12 @@ local function Update(self, event, unit, powerType)
 		element:PreUpdate()
 	end
 
-	local cur, max, mod, oldMax, chargedPoints
+	local cur, max, mod, oldMax, chargedIndex
 	if(event ~= 'ClassPowerDisable') then
 		local powerID = unit == 'vehicle' and SPELL_POWER_COMBO_POINTS or ClassPowerID
 		cur = UnitPower(unit, powerID, true)
 		max = UnitPowerMax(unit, powerID)
 		mod = UnitPowerDisplayMod(powerID)
-		chargedPoints = GetUnitChargedPowerPoints(unit)
-
-		-- UNIT_POWER_POINT_CHARGE doesn't provide a power type
-		powerType = powerType or ClassPowerType
 
 		-- mod should never be 0, but according to Blizz code it can actually happen
 		cur = mod == 0 and 0 or cur / mod
@@ -127,6 +122,15 @@ local function Update(self, event, unit, powerType)
 		-- BUG: Destruction is supposed to show partial soulshards, but Affliction and Demonology should only show full ones
 		if(ClassPowerType == 'SOUL_SHARDS' and GetSpecialization() ~= SPEC_WARLOCK_DESTRUCTION) then
 			cur = cur - cur % 1
+		end
+
+		if(PlayerClass == 'ROGUE') then
+			local chargedPoints = GetUnitChargedPowerPoints(unit)
+			-- according to Blizzard there will only be one
+			chargedIndex = chargedPoints and chargedPoints[1]
+
+			-- UNIT_POWER_POINT_CHARGE doesn't provide a power type
+			powerType = powerType or ClassPowerType
 		end
 
 		local numActive = cur + 0.9
@@ -160,10 +164,10 @@ local function Update(self, event, unit, powerType)
 	* max           - the maximum amount of power (number)
 	* hasMaxChanged - indicates whether the maximum amount has changed since the last update (boolean)
 	* powerType     - the active power type (string)
-	* ...           - the indices of currently charged power points, if any
+	* chargedIndex  - the index of the currently charged power point (number?)
 	--]]
 	if(element.PostUpdate) then
-		return element:PostUpdate(cur, max, oldMax ~= max, powerType, unpack(chargedPoints or {}))
+		return element:PostUpdate(cur, max, oldMax ~= max, powerType, chargedIndex)
 	end
 end
 
@@ -254,11 +258,12 @@ end
 
 do
 	function ClassPowerEnable(self)
+		self:RegisterEvent('UNIT_POWER_FREQUENT', Path)
 		self:RegisterEvent('UNIT_MAXPOWER', Path)
-		self:RegisterEvent('UNIT_POWER_UPDATE', Path)
 
-		-- according to Blizz any class may receive this event due to specific spell auras
-		self:RegisterEvent('UNIT_POWER_POINT_CHARGE', Path)
+		if(PlayerClass == 'ROGUE') then
+			self:RegisterEvent('UNIT_POWER_POINT_CHARGE', Path)
+		end
 
 		self.ClassPower.__isEnabled = true
 
@@ -270,7 +275,7 @@ do
 	end
 
 	function ClassPowerDisable(self)
-		self:UnregisterEvent('UNIT_POWER_UPDATE', Path)
+		self:UnregisterEvent('UNIT_POWER_FREQUENT', Path)
 		self:UnregisterEvent('UNIT_MAXPOWER', Path)
 		self:UnregisterEvent('UNIT_POWER_POINT_CHARGE', Path)
 

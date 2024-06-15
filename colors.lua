@@ -1,4 +1,4 @@
-local _, ns = ...
+local parent, ns = ...
 local oUF = ns.oUF
 local Private = oUF.Private
 
@@ -49,11 +49,20 @@ The rgb values can be either normalized (0-1) or bytes (0-255).
 * color - the ColorMixin-based object
 --]]
 function oUF:CreateColor(r, g, b, a)
-	local color = Mixin({}, ColorMixin, colorMixin)
-	color:SetRGBA(r, g, b, a)
+	if oUF.isRetail then
+		local color = Mixin({}, ColorMixin, colorMixin)
+		color:SetRGBA(r, g, b, a)
 
-	return color
+		return color
+	else
+		if r >= 1 and g >= 1 and b >= 1 then
+			return { r/255, g/255, b/255 }
+		else
+			return {r, g, b}
+		end
+	end
 end
+
 
 local colors = {
 	smooth = {
@@ -147,7 +156,7 @@ for power, color in next, PowerBarColor do
 		if(color.r) then
 			colors.power[power] = oUF:CreateColor(color.r, color.g, color.b)
 
-			if(color.atlas) then
+			if(color.atlas and oUF.isRetail) then
 				colors.power[power]:SetAtlas(color.atlas)
 			end
 		else

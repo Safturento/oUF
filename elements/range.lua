@@ -33,6 +33,15 @@ local OnRangeFrame
 
 local UnitInRange, UnitIsConnected = UnitInRange, UnitIsConnected
 
+local RangeSpellID = {
+	["PALADIN"] = 19750,
+	["SHAMAN"] = 8004,
+	["DRUID"] = 774,
+	["PRIEST"] = 2050,
+	["WARLOCK"] = 5697,
+	["MAGE"] = 475,
+}
+
 local function Update(self, event)
 	local element = self.Range
 	local unit = self.unit
@@ -49,7 +58,29 @@ local function Update(self, event)
 	local inRange, checkedRange
 	local connected = UnitIsConnected(unit)
 	if(connected) then
-		inRange, checkedRange = UnitInRange(unit)
+		if oUF.isRetail then
+			inRange, checkedRange = UnitInRange(unit)
+		else
+			local Spell = RangeSpellID[select(2, UnitClass("player"))]
+			local IsFriend = UnitIsFriend(unit, "player")
+
+			if IsFriend and Spell and IsSpellKnown(Spell) then
+				local name, rank, icon, castTime, minRange, maxRange, spellId = GetSpellInfo(Spell)
+				local IsSpellInRangeFromPlayer = IsSpellInRange(name, unit)
+
+				if IsSpellInRangeFromPlayer == 1 then
+					inRange = true
+					checkedRange = true
+				else
+					inRange = false
+					checkedRange = true
+				end
+			else
+				inRange = CheckInteractDistance(unit, 4)
+				checkedRange = true
+			end
+		end
+
 		if(checkedRange and not inRange) then
 			self:SetAlpha(element.outsideAlpha)
 		else
@@ -88,7 +119,7 @@ local timer = 0
 local function OnRangeUpdate(_, elapsed)
 	timer = timer + elapsed
 
-	if(timer >= .20) then
+	if(timer >= .10) then
 		for _, object in next, _FRAMES do
 			if(object:IsShown()) then
 				Path(object, 'OnUpdate')
