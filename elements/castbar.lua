@@ -128,7 +128,7 @@ local function UpdatePips(element, numStages)
 			duration = GetUnitEmpowerStageDuration(element.__owner.unit, stage - 1)
 		end
 
-		if(duration > CASTBAR_STAGE_DURATION_INVALID) then
+		if(duration and duration > CASTBAR_STAGE_DURATION_INVALID) then
 			stageTotalDuration = stageTotalDuration + duration
 			element.stagePoints[stage] = stageTotalDuration / 1000
 
